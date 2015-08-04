@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   
   s.add_runtime_dependency 'racc'
   
-  s.add_development_dependency 'rspec'
   s.add_development_dependency 'rake'
   
 end
