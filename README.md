@@ -22,21 +22,21 @@ A Ruby library for parsing and generating SQL statements.
 >> ast = parser.scan_str('SELECT * FROM users WHERE id = 1')
 
 # Find which columns where selected in the FROM clause
->> ast.select_list.to_sql
+>> ast.query_expression.list.to_sql
 => "*"
 
 # Output the table expression as SQL
->> ast.table_expression.to_sql
+>> ast.query_expression.table_expression.to_sql
 => "FROM users WHERE id = 1"
 
 # Drill down into the WHERE clause, to examine every piece
->> ast.table_expression.where_clause.to_sql
+>> ast.query_expression.table_expression.where_clause.to_sql
 => "WHERE id = 1"
->> ast.table_expression.where_clause.search_condition.to_sql
+>> ast.query_expression.table_expression.where_clause.search_condition.to_sql
 => "id = 1"
->> ast.table_expression.where_clause.search_condition.left.to_sql
+>> ast.query_expression.table_expression.where_clause.search_condition.left.to_sql
 => "id"
->> ast.table_expression.where_clause.search_condition.right.to_sql
+>> ast.query_expression.table_expression.where_clause.search_condition.right.to_sql
 => "1"
 ```
 
