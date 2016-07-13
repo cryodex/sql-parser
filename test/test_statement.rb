@@ -3,11 +3,15 @@ require 'test/unit'
 
 class TestStatement < Test::Unit::TestCase
   def test_direct_select
-    assert_sql 'SELECT * FROM `users` ORDER BY `name`', SQLParser::Statement::DirectSelect.new(select(all, tblx(from(tbl('users')))), SQLParser::Statement::OrderBy.new(col('name')))
+    assert_sql 'SELECT * FROM `users`', SQLParser::Statement::DirectSelect.new(select(all, tblx(from(tbl('users')))))
   end
 
   def test_order_by
-    assert_sql 'ORDER BY `name`', SQLParser::Statement::OrderBy.new(col('name'))
+    assert_sql 'ORDER BY `name` ASC', order_by(asc(col('name')))
+  end
+
+  def test_limit
+    assert_sql 'LIMIT 10', limit(10)
   end
 
   def test_subquery
@@ -22,6 +26,35 @@ class TestStatement < Test::Unit::TestCase
   def test_select_list
     assert_sql '`id`', slist(col('id'))
     assert_sql '`id`, `name`', slist([col('id'), col('name')])
+  end
+
+  def test_insert
+    assert_sql "INSERT INTO `users` VALUES ('Mr', 'President')",
+      SQLParser::Statement::Insert.new(tbl("users"), nil, SQLParser::Statement::InValueList.new([str("Mr"), str("President")]))
+  end
+
+  def test_insert_with_column_list
+    assert_sql "INSERT INTO `users` (`first`, `last`) VALUES ('Mr', 'President')",
+      SQLParser::Statement::Insert.new(
+        tbl("users"),
+        SQLParser::Statement::InColumnList.new([col("first"), col("last")]),
+        SQLParser::Statement::InValueList.new([str("Mr"), str("President")]))
+  end
+
+  def test_update
+    assert_sql "UPDATE `users` SET `first` = 'boom' WHERE `last` = 'bam' ORDER BY `first` ASC",
+      SQLParser::Statement::Update.new(
+        tbl("users"),
+        [SQLParser::Statement::Assignment.new(col("first"), str("boom"))],
+        where(equals(col("last"), str("bam"))),
+        order_by(asc(col('first'))))
+  end
+
+  def test_delete
+    assert_sql "DELETE FROM `users` WHERE `first` = 'boom'",
+      SQLParser::Statement::Delete.new(
+        tbl("users"),
+        where(equals(col("first"), str("boom"))))
   end
 
   def test_distinct
@@ -75,8 +108,8 @@ class TestStatement < Test::Unit::TestCase
   end
 
   def test_order_clause
-    assert_sql 'ORDER BY `name` DESC', SQLParser::Statement::OrderClause.new(SQLParser::Statement::Descending.new(col('name')))
-    assert_sql 'ORDER BY `id` ASC, `name` DESC', SQLParser::Statement::OrderClause.new([SQLParser::Statement::Ascending.new(col('id')), SQLParser::Statement::Descending.new(col('name'))])
+    assert_sql 'ORDER BY `name` DESC', order_by(desc(col('name')))
+    assert_sql 'ORDER BY `id` ASC, `name` DESC', order_by([asc(col('id')), desc(col('name'))])
   end
 
   def test_having_clause
@@ -130,6 +163,10 @@ class TestStatement < Test::Unit::TestCase
 
   def test_between
     assert_sql '2 BETWEEN 1 AND 3', SQLParser::Statement::Between.new(int(2), int(1), int(3))
+  end
+
+  def test_between_strings
+    assert_sql "'2' BETWEEN '1' AND '3'", SQLParser::Statement::Between.new(str('2'), str('1'), str('3'))
   end
 
   def test_gte
@@ -302,11 +339,11 @@ class TestStatement < Test::Unit::TestCase
   end
 
   def select(list, table_expression = nil)
-    SQLParser::Statement::Select.new(list, table_expression)
+    SQLParser::Statement::Select.new(nil, list, table_expression)
   end
 
-  def tblx(from_clause, where_clause = nil, group_by_clause = nil, having_clause = nil)
-    SQLParser::Statement::TableExpression.new(from_clause, where_clause, group_by_clause, having_clause)
+  def tblx(from_clause, where_clause = nil, group_by_clause = nil, having_clause = nil, order_by = nil, limit = nil)
+    SQLParser::Statement::TableExpression.new(from_clause, where_clause, group_by_clause, having_clause, order_by, limit)
   end
 
   def from(tables)
@@ -319,5 +356,21 @@ class TestStatement < Test::Unit::TestCase
 
   def group_by(columns)
     SQLParser::Statement::GroupByClause.new(columns)
+  end
+
+  def order_by(sort_spec)
+    SQLParser::Statement::OrderBy.new(sort_spec)
+  end
+
+  def asc(column)
+    SQLParser::Statement::Ascending.new(column)
+  end
+
+  def desc(column)
+    SQLParser::Statement::Descending.new(column)
+  end
+
+  def limit(n)
+    SQLParser::Statement::Limit.new(n)
   end
 end

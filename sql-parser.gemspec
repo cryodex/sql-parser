@@ -19,5 +19,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rexical', '1.0.5'
   s.add_development_dependency 'rake'
   s.add_development_dependency 'pry-byebug'
-  
+  s.add_development_dependency 'test-unit'
 end

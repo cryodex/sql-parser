@@ -16,64 +16,71 @@ macro
   IDENT   \w+
 
 rule
-# [:state]  pattern       [actions]
+# [:state]  pattern             [actions]
 
 # literals
-            \"{DATE}\"    { [:date_string, Date.parse(text)] }
-            \'{DATE}\'    { [:date_string, Date.parse(text)] }
+            \"{DATE}\"          { [:date_string, Date.parse(text)] }
+            \'{DATE}\'          { [:date_string, Date.parse(text)] }
 
-            \'            { @state = :STRS;  [:quote, text] }
-  :STRS     \'            { @state = nil;    [:quote, text] }
-  :STRS     .*(?=\')      {                  [:character_string_literal, text.gsub("''", "'")] }
+            \'                  { @state = :STRS;  [:quote, text] }
+  :STRS     ([^\\']|\\.|'')+    {                  [:character_string_literal, text.gsub(/''|\\'/, "'").gsub(/""|\\"/, '"')] }
+  :STRS     \'                  { @state = nil;    [:quote, text] }
 
-            \"            { @state = :STRD;  [:quote, text] }
-  :STRD     \"            { @state = nil;    [:quote, text] }
-  :STRD     .*(?=\")      {                  [:character_string_literal, text.gsub('""', '"')] }
+            \"                  { @state = :STRD;  [:quote, text] }
+  :STRD     \"                  { @state = nil;    [:quote, text] }
+  :STRD     ([^\\"]|\\.|"")+    {                  [:character_string_literal, text.gsub(/''|\\'/, "'").gsub(/""|\\"/, '"')] }
 
-            {UINT}        { [:unsigned_integer, text.to_i] }
+            {UINT}              { [:unsigned_integer, text.to_i] }
 
 # skip
-            {BLANK}       # no action
+            {BLANK}             # no action
 
 # keywords
-            SELECT        { [:SELECT, text] }
-            DATE          { [:DATE, text] }
-            ASC           { [:ASC, text] }
-            AS            { [:AS, text] }
-            FROM          { [:FROM, text] }
-            WHERE         { [:WHERE, text] }
-            BETWEEN       { [:BETWEEN, text] }
-            AND           { [:AND, text] }
-            NOT           { [:NOT, text] }
-            INNER         { [:INNER, text] }
-            INSERT        { [:INSERT, text] }
-            INTO          { [:INTO, text] }
-            IN            { [:IN, text] }
-            ORDER         { [:ORDER, text] }
-            OR            { [:OR, text] }
-            LIKE          { [:LIKE, text] }
-            IS            { [:IS, text] }
-            NULL          { [:NULL, text] }
-            COUNT         { [:COUNT, text] }
-            AVG           { [:AVG, text] }
-            MAX           { [:MAX, text] }
-            MIN           { [:MIN, text] }
-            SUM           { [:SUM, text] }
-            GROUP         { [:GROUP, text] }
-            BY            { [:BY, text] }
-            HAVING        { [:HAVING, text] }
-            CROSS         { [:CROSS, text] }
-            JOIN          { [:JOIN, text] }
-            ON            { [:ON, text] }
-            LEFT          { [:LEFT, text] }
-            OUTER         { [:OUTER, text] }
-            RIGHT         { [:RIGHT, text] }
-            FULL          { [:FULL, text] }
-            USING         { [:USING, text] }
-            EXISTS        { [:EXISTS, text] }
-            DESC          { [:DESC, text] }
-            CURRENT_USER  { [:CURRENT_USER, text] }
-            VALUES        { [:VALUES, text] }
+            SELECT(?!\w)        { [:SELECT, text] }
+            DATE(?!\w)          { [:DATE, text] }
+            ASC(?!\w)           { [:ASC, text] }
+            AS(?!\w)            { [:AS, text] }
+            FROM(?!\w)          { [:FROM, text] }
+            WHERE(?!\w)         { [:WHERE, text] }
+            BETWEEN(?!\w)       { [:BETWEEN, text] }
+            AND(?!\w)           { [:AND, text] }
+            NOT(?!\w)           { [:NOT, text] }
+            INNER(?!\w)         { [:INNER, text] }
+            INSERT(?!\w)        { [:INSERT, text] }
+            INTO(?!\w)          { [:INTO, text] }
+            IN(?!\w)            { [:IN, text] }
+            ORDER(?!\w)         { [:ORDER, text] }
+            LIMIT(?!\w)         { [:LIMIT, text] }
+            OR(?!\w)            { [:OR, text] }
+            LIKE(?!\w)          { [:LIKE, text] }
+            IS(?!\w)            { [:IS, text] }
+            NULL(?!\w)          { [:NULL, text] }
+            COUNT(?!\w)         { [:COUNT, text] }
+            AVG(?!\w)           { [:AVG, text] }
+            MAX(?!\w)           { [:MAX, text] }
+            MIN(?!\w)           { [:MIN, text] }
+            SUM(?!\w)           { [:SUM, text] }
+            GROUP(?!\w)         { [:GROUP, text] }
+            BY(?!\w)            { [:BY, text] }
+            HAVING(?!\w)        { [:HAVING, text] }
+            CROSS(?!\w)         { [:CROSS, text] }
+            JOIN(?!\w)          { [:JOIN, text] }
+            ON(?!\w)            { [:ON, text] }
+            LEFT(?!\w)          { [:LEFT, text] }
+            OUTER(?!\w)         { [:OUTER, text] }
+            RIGHT(?!\w)         { [:RIGHT, text] }
+            FULL(?!\w)          { [:FULL, text] }
+            USING(?!\w)         { [:USING, text] }
+            EXISTS(?!\w)        { [:EXISTS, text] }
+            DESC(?!\w)          { [:DESC, text] }
+            CURRENT_USER(?!\w)  { [:CURRENT_USER, text] }
+            VALUES(?!\w)        { [:VALUES, text] }
+            FOR(?!\w)           { [:FOR, text] }
+            UPDATE(?!\w)        { [:UPDATE, text] }
+            DELETE(?!\w)        { [:DELETE, text] }
+            SET(?!\w)           { [:SET, text] }
+            DISTINCT(?!\w)      { [:DISTINCT, text] }
+            COALESCE(?!\w)      { [:COALESCE, text] }
 
 # tokens
             E             { [:E, text] }
