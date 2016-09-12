@@ -346,7 +346,7 @@ module SQLParser
     end
 
     def arrayize(arr)
-      visit_all(arr).join(', ')
+      visit_all(Array.wrap(arr)).join(', ')
     end
 
     def aggregate(function_name, o)
