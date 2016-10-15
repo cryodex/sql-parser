@@ -218,6 +218,10 @@ module SQLParser
       aggregate('COUNT', o)
     end
 
+    def visit_Coalesce(o)
+      "COALESCE(#{o.args.map { |arg| visit(arg) }.join(', ')})"
+    end
+
     def visit_CrossJoin(o)
       "#{visit(o.left)} CROSS JOIN #{visit(o.right)}"
     end
@@ -332,6 +336,10 @@ module SQLParser
 
     def visit_Integer(o)
       check_negated(o.value.to_s)
+    end
+
+    def visit_SQLFunction(o)
+      "#{o.name.upcase}(#{o.args.map { |a| visit(a) }.join(', ')})"
     end
 
     private

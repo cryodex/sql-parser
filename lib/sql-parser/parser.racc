@@ -252,7 +252,7 @@ rule
     : value_expression
 
   value_expression_list
-    : value_expression_list comma value_expresson { result = Array(val[0]) + Array(val[2]) }
+    : value_expression comma value_expression_list { result = Array(val[0]) + Array(val[2]) }
     | value_expression
 
   value_expression
@@ -312,7 +312,9 @@ rule
     | MAX left_paren value_expression right_paren { result = SQLParser::Statement::Maximum.new(val[2]) }
     | MIN left_paren value_expression right_paren { result = SQLParser::Statement::Minimum.new(val[2]) }
     | SUM left_paren value_expression right_paren { result = SQLParser::Statement::Sum.new(val[2]) }
-    | COALESCE left_paren value_expression_list right_paren { result = SQLParser::Statement::Coalesce.new(val[2]) }
+    | COALESCE left_paren value_expression_list right_paren { result = SQLParser::Statement::Coalesce.new(*val[2]) }
+    | sql_function left_paren value_expression_list right_paren { result = SQLParser::Statement::SQLFunction.new(val[0], *val[2]) }
+    | sql_function left_paren right_paren { result = SQLParser::Statement::SQLFunction.new(val[0]) }
 
 # literal numbers, strings, dates and times
   unsigned_numeric_literal

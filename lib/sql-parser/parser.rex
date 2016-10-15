@@ -81,9 +81,10 @@ rule
             SET(?!\w)           { [:SET, text] }
             DISTINCT(?!\w)      { [:DISTINCT, text] }
             COALESCE(?!\w)      { [:COALESCE, text] }
+            {IDENT}(?=\()       { [:sql_function, text] }
 
 # tokens
-            E             { [:E, text] }
+            E(?=(-|\+|\d)) { [:E, text] }
 
             <>            { [:not_equals_operator, text] }
             !=            { [:not_equals_operator, text] }

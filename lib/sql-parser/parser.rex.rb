@@ -210,7 +210,10 @@ class SQLParser::Parser < Racc::Parser
       when (text = @ss.scan(/COALESCE(?!\w)/i))
          action { [:COALESCE, text] }
 
-      when (text = @ss.scan(/E/i))
+      when (text = @ss.scan(/\w+(?=\()/i))
+         action { [:sql_function, text] }
+
+      when (text = @ss.scan(/E(?=(-|\+|\d))/i))
          action { [:E, text] }
 
       when (text = @ss.scan(/<>/i))

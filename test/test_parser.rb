@@ -258,6 +258,10 @@ class TestParser < Test::Unit::TestCase
     assert_understands 'SELECT COUNT(`id`) FROM `users`'
   end
 
+  def test_coalesce
+    assert_understands 'SELECT COALESCE(NULL, 1)'
+  end
+
   def test_from_clause
     assert_understands 'SELECT 1 FROM `users`'
     assert_understands 'SELECT `id` FROM `users`'
@@ -331,6 +335,7 @@ class TestParser < Test::Unit::TestCase
 
   def test_approximate_numeric_literal
     assert_understands 'SELECT 1E1'
+    assert_sql 'SELECT 1E1', 'SELECT 1e1'
     assert_understands 'SELECT 1E+1'
     assert_understands 'SELECT 1E-1'
 
@@ -353,6 +358,9 @@ class TestParser < Test::Unit::TestCase
     assert_understands 'SELECT -1.5E30'
     assert_understands 'SELECT -1.5E+30'
     assert_understands 'SELECT -1.5E-30'
+
+    # doesn't mess up tables that start with e
+    assert_sql 'SELECT * FROM `egg`', 'SELECT * FROM egg'
   end
 
   def test_signed_float
@@ -393,6 +401,12 @@ class TestParser < Test::Unit::TestCase
   def test_unsigned_integer
     assert_understands 'SELECT 1'
     assert_understands 'SELECT 10'
+  end
+
+  def test_sql_function
+    assert_understands 'SELECT NOW()'
+    assert_understands "SELECT CONCAT('a', 'b')"
+    assert_sql 'SELECT NOW()', 'SELECT now()'
   end
 
   def test_invalid

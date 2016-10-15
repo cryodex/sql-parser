@@ -341,9 +341,6 @@ module SQLParser
 
     end
 
-    class Coalesce < Aggregate
-    end
-
     class Sum < Aggregate
     end
 
@@ -357,6 +354,16 @@ module SQLParser
     end
 
     class Count < Aggregate
+    end
+
+    class Coalesce < Node
+
+      def initialize(*args)
+        @args = args
+      end
+
+      attr_reader :args
+
     end
 
     class JoinedTable < Node
@@ -539,6 +546,18 @@ module SQLParser
     end
 
     class Integer < Literal
+    end
+
+    class SQLFunction < Node
+
+      def initialize(name, *args)
+        @name = name
+        @args = args
+      end
+
+      attr_reader :name
+      attr_reader :args
+
     end
     
   end
