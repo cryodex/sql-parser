@@ -9,30 +9,29 @@ rule
   direct_sql_data_statement
     : direct_select_statement_multiple_rows
     | insert_specification
+    | update_statement
+    | delete_statement
+
+  update_statement
+    : UPDATE table_reference SET assignment_list where_clause order_by_clause limit_clause { result = SQLParser::Statement::Update.new(val[1], val[3], val[4], val[5], val[6]) }
+
+  assignment_list
+    : assignment_list comma assignment { result = Array(val[0]) + Array(val[2]) }
+    | assignment { result = Array(val[0]) }
+
+  assignment
+    : column_reference equals_operator value_expression { result = SQLParser::Statement::Assignment.new(val[0], val[2]) }
+
+# MySQL seems to support deletes from multiple tables http://dev.mysql.com/doc/refman/5.7/en/delete.html
+  delete_statement
+    : DELETE FROM table_reference where_clause order_by_clause limit_clause { result = SQLParser::Statement::Delete.new(val[2], val[3], val[4], val[5]) }
 
   direct_select_statement_multiple_rows
-    : query_expression order_by_clause { result = SQLParser::Statement::DirectSelect.new(val[0], val[1]) }
+    : query_expression maybe_for_update { result = SQLParser::Statement::DirectSelect.new(val[0], val[1]) }
 
-# module contents
-  order_by_clause
+  maybe_for_update
     : # no action
-    | ORDER BY sort_specification_list { result = SQLParser::Statement::OrderBy.new(val[2]) }
-
-  sort_specification_list
-    : sort_specification_list comma sort_specification { result = Array(val[0]) + Array(val[2]) }
-    | sort_specification
-
-  sort_specification
-    : sort_key ordering_specification { result = val[1].new(val[0]) }
-
-  sort_key
-    : column_name
-    | unsigned_integer { result = SQLParser::Statement::Integer.new(val[0]) }
-
-  ordering_specification
-    : { result = SQLParser::Statement::Ascending } # default
-    | ASC { result = SQLParser::Statement::Ascending }
-    | DESC { result = SQLParser::Statement::Descending }
+    | FOR UPDATE
 
 # queries
   subquery
@@ -40,25 +39,25 @@ rule
     : left_paren query_expression right_paren { result = SQLParser::Statement::Subquery.new(val[1]) }
 
   query_expression
-    : query_specification
+    : SELECT distinct select_list table_expression { result = SQLParser::Statement::Select.new(val[1], val[2], val[3]) }
 
   insert_specification 
-    : INSERT INTO table_reference value_list { result = SQLParser::Statement::Insert.new(val[2], nil, val[3]) }
-    | INSERT INTO table_reference column_list value_list { result = SQLParser::Statement::Insert.new(val[2], val[3], val[4]) }
+    : INSERT INTO table_factor column_list value_list { result = SQLParser::Statement::Insert.new(val[2], val[3], val[4]) }
 
   column_list
-    : left_paren in_column_list right_paren { result = SQLParser::Statement::InColumnList.new(val[1]) }
+    : # no action
+    | left_paren in_column_list right_paren { result = SQLParser::Statement::InColumnList.new(val[1]) }
  
   in_column_list
-    : value_expression comma in_column_list { result = Array(val[0]) + Array(val[2]) }
-	  | value_expression
+    : column_reference comma in_column_list { result = Array(val[0]) + Array(val[2]) }
+	  | column_reference
   
   value_list
     : VALUES left_paren in_value_list right_paren { result = SQLParser::Statement::InValueList.new(val[2]) }
 
-  query_specification
-    : SELECT select_list table_expression { result = SQLParser::Statement::Select.new(val[1], val[2]) }
-    | SELECT select_list { result = SQLParser::Statement::Select.new(val[1]) }
+  distinct
+    : # no action
+    | DISTINCT
 
   select_list
     : asterisk { result = SQLParser::Statement::All.new }
@@ -71,18 +70,23 @@ rule
   derived_column
     : value_expression AS column_name { result = SQLParser::Statement::As.new(val[0], val[2]) }
     | value_expression column_name { result = SQLParser::Statement::As.new(val[0], val[1]) }
+    | search_condition
     | value_expression
 
   table_expression
-    : from_clause where_clause group_by_clause having_clause { result = SQLParser::Statement::TableExpression.new(val[0], val[1], val[2], val[3]) }
+    : # no action
+    | from_clause where_clause group_by_clause having_clause order_by_clause limit_clause { result = SQLParser::Statement::TableExpression.new(val[0], val[1], val[2], val[3], val[4], val[5]) }
 
   from_clause
     : FROM table_reference { result = SQLParser::Statement::FromClause.new(val[1]) }
 
-  table_reference
+  table_factor
     : table_name AS column_name { result = SQLParser::Statement::As.new(val[0], val[2]) }
     | table_name column_name { result = SQLParser::Statement::As.new(val[0], val[1]) }
     | table_name
+
+  table_reference
+    : table_factor
     | joined_table
 
   table_subquery
@@ -140,6 +144,30 @@ rule
     : # no action
     | HAVING search_condition { result = SQLParser::Statement::HavingClause.new(val[1]) }
 
+  order_by_clause
+    : # no action
+    | ORDER BY sort_specification_list { result = SQLParser::Statement::OrderBy.new(val[2]) }
+
+  sort_specification_list
+    : sort_specification_list comma sort_specification { result = Array(val[0]) + Array(val[2]) }
+    | sort_specification
+
+  sort_specification
+    : sort_key ordering_specification { result = val[1].new(val[0]) }
+
+  sort_key
+    : column_reference
+    | value_expression
+
+  ordering_specification
+    : { result = SQLParser::Statement::Ascending } # default
+    | ASC { result = SQLParser::Statement::Ascending }
+    | DESC { result = SQLParser::Statement::Descending }
+
+  limit_clause
+    : # no action
+    | LIMIT unsigned_integer { result = SQLParser::Statement::Limit.new(val[1]) }
+
 # query expression components
   row_subquery
     : subquery
@@ -196,9 +224,6 @@ rule
     | boolean_test
 
   boolean_test
-    : boolean_primary
-
-  boolean_primary
     : predicate
     | left_paren search_condition right_paren { result = val[1] }
 
@@ -209,6 +234,7 @@ rule
     | like_predicate
     | null_predicate
     | exists_predicate
+    | value_expression
 
   comparison_predicate
     : row_value_constructor equals_operator row_value_constructor { result = SQLParser::Statement::Equals.new(val[0], val[2]) }
@@ -224,6 +250,10 @@ rule
 
   row_value_constructor_element
     : value_expression
+
+  value_expression_list
+    : value_expression comma value_expression_list { result = Array(val[0]) + Array(val[2]) }
+    | value_expression
 
   value_expression
     : numeric_value_expression
@@ -248,6 +278,7 @@ rule
     | column_reference
     | set_function_specification
     | left_paren value_expression right_paren { result = val[1] }
+    | NULL { result = SQLParser::Statement::Null.new }
 
   unsigned_value_specification
     : unsigned_literal
@@ -261,14 +292,18 @@ rule
     : CURRENT_USER { result = SQLParser::Statement::CurrentUser.new }
 
   column_reference
-    : qualifier period column_name { result = SQLParser::Statement::QualifiedColumn.new(val[0], val[2]) }
+    : qualifier period column_or_star { result = SQLParser::Statement::QualifiedColumn.new(val[0], val[2]) }
     | column_name
+
+  column_or_star
+    : column_name
+    | asterisk { result = SQLParser::Statement::All.new }
 
   qualifier
     : table_name
 
   set_function_specification
-    : COUNT left_paren asterisk right_paren { result = SQLParser::Statement::Count.new(SQLParser::Statement::All.new) }
+    : COUNT left_paren distinct asterisk right_paren { result = SQLParser::Statement::Count.new(SQLParser::Statement::All.new) }
     | general_set_function
 
   general_set_function
@@ -277,6 +312,9 @@ rule
     | MAX left_paren value_expression right_paren { result = SQLParser::Statement::Maximum.new(val[2]) }
     | MIN left_paren value_expression right_paren { result = SQLParser::Statement::Minimum.new(val[2]) }
     | SUM left_paren value_expression right_paren { result = SQLParser::Statement::Sum.new(val[2]) }
+    | COALESCE left_paren value_expression_list right_paren { result = SQLParser::Statement::Coalesce.new(*val[2]) }
+    | sql_function left_paren value_expression_list right_paren { result = SQLParser::Statement::SQLFunction.new(val[0], *val[2]) }
+    | sql_function left_paren right_paren { result = SQLParser::Statement::SQLFunction.new(val[0]) }
 
 # literal numbers, strings, dates and times
   unsigned_numeric_literal

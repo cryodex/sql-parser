@@ -16,16 +16,38 @@ module SQLParser
       values = ' VALUES ' + visit(o.in_value_list)
       "INSERT INTO #{name}#{columns}#{values}"
     end
-    
+
+    def visit_Update(o)
+      name = visit(o.table_reference)
+      assignments = o.assignments.map do |assignment|
+        "#{visit(assignment.left)} = #{visit(assignment.right)}"
+      end.join(", ")
+      where = " " + visit(o.where_clause) if o.where_clause
+      order_by = " " + visit(o.order_by) if o.order_by
+      limit = " " + visit(o.limit) if o.limit
+      "UPDATE #{name} SET #{assignments}#{where}#{order_by}#{limit}"
+    end
+
+    def visit_Delete(o)
+      name = visit(o.table_reference)
+      where = " " + visit(o.where_clause) if o.where_clause
+      order_by = " " + visit(o.order_by) if o.order_by
+      limit = " " + visit(o.limit) if o.limit
+      "DELETE FROM #{name}#{where}#{order_by}#{limit}"
+    end
+
     def visit_DirectSelect(o)
-      [
-        o.query_expression,
-        o.order_by
-      ].compact.collect { |e| visit(e) }.join(' ')
+      s = visit(o.query_expression)
+      s +=" FOR UPDATE" if o.for_update
+      s
     end
 
     def visit_OrderBy(o)
       "ORDER BY #{arrayize(o.sort_specification)}"
+    end
+
+    def visit_Limit(o)
+      "LIMIT #{o.limit}"
     end
 
     def visit_Subquery(o)
@@ -56,16 +78,14 @@ module SQLParser
         o.from_clause,
         o.where_clause,
         o.group_by_clause,
-        o.having_clause
+        o.having_clause,
+        o.order_by,
+        o.limit,
       ].compact.collect { |e| visit(e) }.join(' ')
     end
 
     def visit_FromClause(o)
       "FROM #{arrayize(o.tables)}"
-    end
-
-    def visit_OrderClause(o)
-      "ORDER BY #{arrayize(o.columns)}"
     end
 
     def visit_Ascending(o)
@@ -106,7 +126,7 @@ module SQLParser
 
     def visit_Exists(o)
       if @negated
-        "NOT EXISTS #{visit(o.table_subquery)}"
+        unnegate { "NOT EXISTS #{visit(o.table_subquery)}" }
       else
         "EXISTS #{visit(o.table_subquery)}"
       end
@@ -114,7 +134,7 @@ module SQLParser
 
     def visit_Is(o)
       if @negated
-        comparison('IS NOT', o)
+        unnegate { comparison('IS NOT', o) }
       else
         comparison('IS', o)
       end
@@ -122,7 +142,7 @@ module SQLParser
 
     def visit_Like(o)
       if @negated
-        comparison('NOT LIKE', o)
+        unnegate { comparison('NOT LIKE', o) }
       else
         comparison('LIKE', o)
       end
@@ -130,7 +150,7 @@ module SQLParser
 
     def visit_In(o)
       if @negated
-        comparison('NOT IN', o)
+        unnegate { comparison('NOT IN', o) }
       else
         comparison('IN', o)
       end
@@ -146,7 +166,9 @@ module SQLParser
 
     def visit_Between(o)
       if @negated
-        "#{visit(o.left)} NOT BETWEEN #{visit(o.min)} AND #{visit(o.max)}"
+        unnegate do
+          "#{visit(o.left)} NOT BETWEEN #{visit(o.min)} AND #{visit(o.max)}"
+        end
       else
         "#{visit(o.left)} BETWEEN #{visit(o.min)} AND #{visit(o.max)}"
       end
@@ -170,7 +192,7 @@ module SQLParser
 
     def visit_Equals(o)
       if @negated
-        comparison('<>', o)
+        unnegate { comparison('<>', o) }
       else
         comparison('=', o)
       end
@@ -194,6 +216,10 @@ module SQLParser
 
     def visit_Count(o)
       aggregate('COUNT', o)
+    end
+
+    def visit_Coalesce(o)
+      "COALESCE(#{o.args.map { |arg| visit(arg) }.join(', ')})"
     end
 
     def visit_CrossJoin(o)
@@ -297,19 +323,23 @@ module SQLParser
     end
 
     def visit_String(o)
-      "'%s'" % escape(o.value)
+      check_negated("'%s'" % escape(o.value))
     end
 
     def visit_ApproximateFloat(o)
-      "#{visit(o.mantissa)}E#{visit(o.exponent)}"
+      check_negated("#{visit(o.mantissa)}E#{visit(o.exponent)}")
     end
 
     def visit_Float(o)
-      o.value.to_s
+      check_negated(o.value.to_s)
     end
 
     def visit_Integer(o)
-      o.value.to_s
+      check_negated(o.value.to_s)
+    end
+
+    def visit_SQLFunction(o)
+      "#{o.name.upcase}(#{o.args.map { |a| visit(a) }.join(', ')})"
     end
 
     private
@@ -319,6 +349,22 @@ module SQLParser
       yield
     ensure
       @negated = false
+    end
+
+    def unnegate
+      old = @negated
+      @negated = false
+      yield
+    ensure
+      @negated = old
+    end
+
+    def check_negated(s)
+      if @negated
+        "NOT #{unnegate { s }}"
+      else
+        s
+      end
     end
 
     def quote(str)

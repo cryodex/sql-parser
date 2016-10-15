@@ -39,19 +39,41 @@ module SQLParser
       attr_reader :table_reference
       attr_reader :column_list
       attr_reader :in_value_list
-      
+
     end
-    
-    class DirectSelect < Node
-      
-      def initialize(query_expression, order_by)
-        @query_expression = query_expression
+
+    class Update < Node
+      def initialize(table_reference, assignments, where_clause, order_by = nil, limit = nil)
+        @table_reference = table_reference
+        @assignments = assignments
+        @where_clause = where_clause
         @order_by = order_by
+        @limit = limit
       end
 
-      attr_reader :query_expression
-      attr_reader :order_by
-      
+      attr_reader :table_reference, :assignments, :where_clause, :order_by, :limit
+    end
+
+    class Delete < Node
+      def initialize(table_reference, where_clause, order_by = nil, limit = nil)
+        @table_reference = table_reference
+        @where_clause = where_clause
+        @order_by = order_by
+        @limit = limit
+      end
+
+      attr_reader :table_reference, :where_clause, :order_by, :limit
+    end
+
+    class DirectSelect < Node
+
+      def initialize(query_expression, for_update = nil)
+        @query_expression = query_expression
+        @for_update = for_update
+      end
+
+      attr_reader :query_expression, :for_update
+
     end
 
     class OrderBy < Node
@@ -62,6 +84,16 @@ module SQLParser
 
       attr_reader :sort_specification
       
+    end
+
+    class Limit < Node
+
+      def initialize(limit)
+        @limit = limit
+      end
+
+      attr_reader :limit
+
     end
 
     class Subquery < Node
@@ -75,11 +107,13 @@ module SQLParser
     end
 
     class Select < Node
-      def initialize(list, table_expression = nil)
+      def initialize(distinct, list, table_expression = nil)
+        @distinct = distinct
         @list = list
         @table_expression = table_expression
       end
 
+      attr_reader :distinct
       attr_reader :list
       attr_reader :table_expression
       
@@ -110,17 +144,16 @@ module SQLParser
 
     class TableExpression < Node
       
-      def initialize(from_clause, where_clause = nil, group_by_clause = nil, having_clause = nil)
+      def initialize(from_clause, where_clause = nil, group_by_clause = nil, having_clause = nil, order_by = nil, limit = nil)
         @from_clause = from_clause
         @where_clause = where_clause
         @group_by_clause = group_by_clause
         @having_clause = having_clause
+        @order_by = order_by
+        @limit = limit
       end
 
-      attr_reader :from_clause
-      attr_reader :where_clause
-      attr_reader :group_by_clause
-      attr_reader :having_clause
+      attr_reader :from_clause, :where_clause, :group_by_clause, :having_clause, :order_by, :limit
       
     end
 
@@ -131,16 +164,6 @@ module SQLParser
       end
 
       attr_reader :tables
-      
-    end
-
-    class OrderClause < Node
-      
-      def initialize(columns)
-        @columns = Array(columns)
-      end
-
-      attr_reader :columns
       
     end
 
@@ -262,7 +285,7 @@ module SQLParser
     class InValueList < Node
       
       def initialize(values)
-        @values = values
+        @values = Array(values)
       end
 
       attr_reader :values
@@ -272,7 +295,7 @@ module SQLParser
     class InColumnList < Node
       
       def initialize(columns)
-        @columns = columns
+        @columns = Array(columns)
       end
 
       attr_reader :columns
@@ -315,7 +338,7 @@ module SQLParser
       end
 
       attr_reader :column
-      
+
     end
 
     class Sum < Aggregate
@@ -331,6 +354,16 @@ module SQLParser
     end
 
     class Count < Aggregate
+    end
+
+    class Coalesce < Node
+
+      def initialize(*args)
+        @args = args
+      end
+
+      attr_reader :args
+
     end
 
     class JoinedTable < Node
@@ -420,8 +453,8 @@ module SQLParser
       
     end
 
-    class Arithmetic < Node
-      
+    class Binary < Node
+
       def initialize(left, right)
         @left = left
         @right = right
@@ -432,16 +465,19 @@ module SQLParser
       
     end
 
-    class Multiply < Arithmetic
+    class Multiply < Binary
     end
 
-    class Divide < Arithmetic
+    class Divide < Binary
     end
 
-    class Add < Arithmetic
+    class Add < Binary
     end
 
-    class Subtract < Arithmetic
+    class Subtract < Binary
+    end
+
+    class Assignment < Binary
     end
 
     class Unary < Node
@@ -510,6 +546,18 @@ module SQLParser
     end
 
     class Integer < Literal
+    end
+
+    class SQLFunction < Node
+
+      def initialize(name, *args)
+        @name = name
+        @args = args
+      end
+
+      attr_reader :name
+      attr_reader :args
+
     end
     
   end

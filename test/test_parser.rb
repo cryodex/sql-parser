@@ -10,21 +10,28 @@ class TestParser < Test::Unit::TestCase
     assert_understands 'SELECT `CURRENT_USER`'
     assert_understands 'SELECT `current_user`'
   end
-  
-  def test_insert_into_clause
-    assert_understands 'INSERT INTO `users` VALUES (1, 2)'
+
+  def test_insert
+    assert_sql "INSERT INTO `users` VALUES ('a')", "INSERT INTO users VALUES ('a')"
+    assert_sql "INSERT INTO `users` (`first`) VALUES (1)", "INSERT INTO users (first) VALUES (1)"
+    assert_understands "INSERT INTO `users` VALUES (1, 2)"
+    assert_understands "INSERT INTO `users` (`first`, `last`) VALUES ('a', 'b')"
+    assert_raise(Racc::ParseError) { SQLParser::Parser.parse("INSERT INTO `users`, `foo` VALUES (1)") }
+    assert_raise(Racc::ParseError) { SQLParser::Parser.parse("INSERT INTO `users` (1) VALUES (1)") }
   end
-  
-  def test_insert_into_clause
-    assert_understands 'INSERT INTO `users` VALUES (`a`, `b`)'
+
+  def test_update
+    assert_understands "UPDATE `users` SET `first` = 'boom' WHERE `last` = 'foo' ORDER BY `last` ASC LIMIT 1"
+    assert_understands "UPDATE `users` SET `first` = 'boom', `last` = 'bam' WHERE `last` = 'foo' ORDER BY `last` ASC"
+    assert_understands "UPDATE `users` INNER JOIN `animals` ON `animals`.`user_id` = `users`.`id` SET `users`.`first` = 'boom', `users`.`last` = 'bam' WHERE `animals`.`name` = 'foo'"
   end
-  
-  def test_insert_with_quotes
-    q =  'INSERT INTO "users" ("active", "created_on", "email", "last_login", "password", "salt", "username") VALUES ("a", "b", "c", "c", "e")'
-    q.gsub!(/([^\\])"/) { $1 + '`' }
-    puts q.inspect
-    assert_understands q
-    
+
+  def test_delete
+    assert_understands "DELETE FROM `users`"
+    assert_understands "DELETE FROM `users` WHERE `last` = 'foo'"
+    assert_understands "DELETE FROM `users` WHERE `last` = 'foo' ORDER BY `last` ASC LIMIT 1"
+    assert_understands "DELETE FROM `users` WHERE (`first` = 'boom' AND `last` = 'foo') ORDER BY `last` DESC LIMIT 1"
+    assert_understands "DELETE FROM `users` ORDER BY `last` ASC LIMIT 1"
   end
 
   def test_case_insensitivity
@@ -39,12 +46,26 @@ class TestParser < Test::Unit::TestCase
     assert_sql 'SELECT * FROM `users` ORDER BY 1 ASC', 'SELECT * FROM users ORDER BY 1'
     assert_understands 'SELECT * FROM `users` ORDER BY 1 ASC'
     assert_understands 'SELECT * FROM `users` ORDER BY 1 DESC'
+    assert_understands 'SELECT * FROM `users` ORDER BY (1 + 1) ASC'
+    assert_understands "SELECT * FROM `users` ORDER BY 'a' ASC"
   end
 
   def test_order
     assert_sql 'SELECT * FROM `users` ORDER BY `name` ASC', 'SELECT * FROM users ORDER BY name'
+    assert_sql 'SELECT * FROM `users` ORDER BY `users`.`name` ASC', 'SELECT * FROM users ORDER BY users.name'
     assert_understands 'SELECT * FROM `users` ORDER BY `name` ASC'
+    assert_understands 'SELECT * FROM `users` ORDER BY `users`.`name` ASC'
     assert_understands 'SELECT * FROM `users` ORDER BY `name` DESC'
+    assert_understands 'SELECT * FROM `users` ORDER BY `users`.`name` DESC'
+  end
+
+  def test_limit
+    assert_sql 'SELECT * FROM `users` LIMIT 10', 'SELECT * FROM users LIMIT 10'
+  end
+
+  def test_select_where_order_limit
+    assert_understands "SELECT * FROM `users` WHERE `first` = 'boom' ORDER BY `first` ASC, `last` DESC LIMIT 10"
+    assert_understands "SELECT * FROM `users` WHERE `first` = 'boom' ORDER BY `first` DESC LIMIT 10"
   end
 
   def test_full_outer_join
@@ -175,10 +196,16 @@ class TestParser < Test::Unit::TestCase
 
   def test_not_between
     assert_understands 'SELECT * FROM `users` WHERE `id` NOT BETWEEN 1 AND 3'
+    assert_understands "SELECT * FROM `users` WHERE `id` NOT BETWEEN '1' AND '3'"
+    assert_understands "SELECT 0 NOT BETWEEN 1 AND 3"
+    assert_understands "SELECT '0' NOT BETWEEN '1' AND '3'"
   end
 
   def test_between
     assert_understands 'SELECT * FROM `users` WHERE `id` BETWEEN 1 AND 3'
+    assert_understands "SELECT * FROM `users` WHERE `id` BETWEEN 'a' AND 'c'"
+    assert_understands "SELECT 0 BETWEEN 1 AND 3"
+    assert_understands "SELECT '0' BETWEEN '1' AND '3'"
   end
 
   def test_gte
@@ -231,6 +258,10 @@ class TestParser < Test::Unit::TestCase
     assert_understands 'SELECT COUNT(`id`) FROM `users`'
   end
 
+  def test_coalesce
+    assert_understands 'SELECT COALESCE(NULL, 1)'
+  end
+
   def test_from_clause
     assert_understands 'SELECT 1 FROM `users`'
     assert_understands 'SELECT `id` FROM `users`'
@@ -243,6 +274,7 @@ class TestParser < Test::Unit::TestCase
     assert_understands 'SELECT (1 + 1) AS `x`, (2 + 2) AS `y`'
     assert_understands 'SELECT `id`, `name`'
     assert_understands 'SELECT (`age` * 2) AS `double_age`, `first_name` AS `name`'
+    assert_understands "SELECT `first`, 1, NOT 0, 'a', 1 > 2, NULL, (1 AND 0), (1 <> 2 OR 'a' > 'b')"
   end
 
   def test_as
@@ -280,16 +312,20 @@ class TestParser < Test::Unit::TestCase
     assert_understands "SELECT DATE '2008-07-11'"
   end
 
-  def test_quoting
+  def test_empty_string
     assert_sql %{SELECT ''}, %{SELECT ""}
     assert_understands %{SELECT ''}
+  end
 
-    assert_sql %{SELECT 'Quote "this"'}, %{SELECT "Quote ""this"""}
+  def test_escaped_quotes
+    assert_sql %{SELECT 'Quote "this""', 'boom"\\\\ bam'}, %{SELECT "Quote ""this""\\"", "boom\\"\\\\ bam"}
+    assert_sql %{SELECT 'Quote "this""', 'boom" bam'}, %{SELECT "Quote ""this""\\"", "boom\\" bam"}
+    assert_sql %{SELECT 'Quote ''this'''}, %{SELECT 'Quote ''this'''}
+    assert_sql %{SELECT 'Quote ''this'''''}, %{SELECT 'Quote \\'this\\''''}
+    assert_sql %{SELECT 'Quote "this"'}, %{SELECT "Quote \\"this\\""}
+    assert_sql %{SELECT '"'}, %{SELECT "\\""}
     assert_understands %{SELECT 'Quote ''this!'''}
-
-    # # FIXME
-    # assert_sql %{SELECT '"'}, %{SELECT """"}
-    # assert_understands %{SELECT ''''}
+    assert_understands %{SELECT ''''}
   end
 
   def test_string
@@ -299,6 +335,7 @@ class TestParser < Test::Unit::TestCase
 
   def test_approximate_numeric_literal
     assert_understands 'SELECT 1E1'
+    assert_sql 'SELECT 1E1', 'SELECT 1e1'
     assert_understands 'SELECT 1E+1'
     assert_understands 'SELECT 1E-1'
 
@@ -321,6 +358,9 @@ class TestParser < Test::Unit::TestCase
     assert_understands 'SELECT -1.5E30'
     assert_understands 'SELECT -1.5E+30'
     assert_understands 'SELECT -1.5E-30'
+
+    # doesn't mess up tables that start with e
+    assert_sql 'SELECT * FROM `egg`', 'SELECT * FROM egg'
   end
 
   def test_signed_float
@@ -361,6 +401,16 @@ class TestParser < Test::Unit::TestCase
   def test_unsigned_integer
     assert_understands 'SELECT 1'
     assert_understands 'SELECT 10'
+  end
+
+  def test_sql_function
+    assert_understands 'SELECT NOW()'
+    assert_understands "SELECT CONCAT('a', 'b')"
+    assert_sql 'SELECT NOW()', 'SELECT now()'
+  end
+
+  def test_invalid
+    assert_raise(Racc::ParseError) { SQLParser::Parser.parse('SELECT1') }
   end
 
   private

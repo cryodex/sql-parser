@@ -11,11 +11,11 @@ GENERATED_PARSER = 'lib/sql-parser/parser.racc.rb'
 GENERATED_LEXER = 'lib/sql-parser/parser.rex.rb'
 
 file GENERATED_LEXER => 'lib/sql-parser/parser.rex' do |t|
-  sh "rex -o #{t.name} #{t.prerequisites.first}"
+  sh "bundle exec rex -o #{t.name} #{t.prerequisites.first}"
 end
 
 file GENERATED_PARSER => 'lib/sql-parser/parser.racc' do |t|
-  sh "racc -o #{t.name} #{t.prerequisites.first}"
+  sh "bundle exec racc -o #{t.name} #{t.prerequisites.first}"
 end
 
 task :parser => [GENERATED_LEXER, GENERATED_PARSER]
