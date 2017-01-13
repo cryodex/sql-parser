@@ -46,6 +46,19 @@ rule
     : INSERT INTO table_reference value_list { result = SQLParser::Statement::Insert.new(val[2], nil, val[3]) }
     | INSERT INTO table_reference column_list value_list { result = SQLParser::Statement::Insert.new(val[2], val[3], val[4]) }
 
+  update_specification
+    : UPDATE table_reference SET update_field_list where_clause { result = nil }
+
+  update_field
+    : column_name equals_operator value_expression { result = nil }
+
+  update_field_list
+    : update_field comma update_field_list
+    | update_field
+
+  delete_specification
+    : DELETE from_clause where_clause { result = nil }
+
   column_list
     : left_paren in_column_list right_paren { result = SQLParser::Statement::InColumnList.new(val[1]) }
  

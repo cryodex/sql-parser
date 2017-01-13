@@ -37,6 +37,8 @@ rule
 
 # keywords
             SELECT        { [:SELECT, text] }
+            UPDATE        { [:UPDATE, text] }
+            DELETE        { [:DELETE, text] }
             DATE          { [:DATE, text] }
             ASC           { [:ASC, text] }
             AS            { [:AS, text] }

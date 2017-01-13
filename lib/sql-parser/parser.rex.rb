@@ -45,7 +45,7 @@ class SQLParser::Parser < Racc::Parser
 
   def next_token
     return if @ss.eos?
-
+    
     # skips empty actions
     until token = _next_token or @ss.eos?; end
     token
@@ -77,6 +77,12 @@ class SQLParser::Parser < Racc::Parser
 
       when (text = @ss.scan(/SELECT/i))
          action { [:SELECT, text] }
+
+      when (text = @ss.scan(/UPDATE/i))
+         action { [:UPDATE, text] }
+
+      when (text = @ss.scan(/DELETE/i))
+         action { [:DELETE, text] }
 
       when (text = @ss.scan(/DATE/i))
          action { [:DATE, text] }
@@ -260,7 +266,7 @@ class SQLParser::Parser < Racc::Parser
          action { @state = nil;    [:quote, text] }
 
       when (text = @ss.scan(/.*(?=\')/i))
-         action {                 [:character_string_literal, text.gsub("''", "'")] }
+         action {                  [:character_string_literal, text.gsub("''", "'")] }
 
       else
         text = @ss.string[@ss.pos .. -1]
@@ -273,7 +279,7 @@ class SQLParser::Parser < Racc::Parser
          action { @state = nil;    [:quote, text] }
 
       when (text = @ss.scan(/.*(?=\")/i))
-         action {                 [:character_string_literal, text.gsub('""', '"')] }
+         action {                  [:character_string_literal, text.gsub('""', '"')] }
 
       else
         text = @ss.string[@ss.pos .. -1]
