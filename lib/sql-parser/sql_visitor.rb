@@ -15,6 +15,19 @@ module SQLParser
       where_clause = o.where_clause.nil? ? '' : ' ' + visit(o.where_clause)
       "DELETE #{name}#{where_clause}"
     end
+
+    def visit_Update(o)
+      name = visit(o.table_reference)
+      update_column_list = visit(o.update_column_list)
+      where_clause = o.where_clause.nil? ? '' : ' ' + visit(o.where_clause)
+      "UPDATE #{name} SET #{update_column_list}#{where_clause}"
+    end
+
+    def visit_UpdateColumn(o)
+      column = visit(o.column)
+      value = visit(o.value)
+      "#{column} = #{value}"
+    end
     
     def visit_Insert(o)
       name = visit(o.table_reference)

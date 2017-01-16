@@ -18,6 +18,10 @@ class TestParser < Test::Unit::TestCase
   def test_delete_from_with_where
     assert_understands 'DELETE FROM `users` WHERE `id` = 1'
   end
+
+  def test_update
+    assert_understands 'UPDATE `users` SET `active` = 0'
+  end
   
   def test_insert_into_clause
     assert_understands 'INSERT INTO `users` VALUES (1, 2)'

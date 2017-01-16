@@ -49,14 +49,14 @@ rule
     | INSERT INTO table_reference column_list value_list { result = SQLParser::Statement::Insert.new(val[2], val[3], val[4]) }
 
   update_specification
-    : UPDATE table_reference SET update_field_list where_clause { result = nil }
+    : UPDATE table_reference SET update_column_list where_clause { result = SQLParser::Statement::Update.new(val[1], val[3], val[4]) }
 
-  update_field
-    : column_name equals_operator value_expression { result = nil }
+  update_column
+    : column_name equals_operator value_expression { result = SQLParser::Statement::UpdateColumn.new(val[0], val[2]) }
 
-  update_field_list
-    : update_field comma update_field_list
-    | update_field
+  update_column_list
+    : update_column comma update_column_list { result = Array(val[0]) + Array(val[2]) }
+    | update_column
 
   delete_specification
     : DELETE from_clause where_clause { result = SQLParser::Statement::Delete.new(val[1], val[2]) }

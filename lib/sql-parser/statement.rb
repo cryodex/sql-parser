@@ -39,6 +39,20 @@ module SQLParser
       attr_reader :where_clause
 
     end
+
+    class Update < Node
+
+      def initialize(table_reference, update_column_list, where_clause)
+        @table_reference = table_reference
+        @update_column_list = update_column_list
+        @where_clause = where_clause
+      end
+
+      attr_reader :table_reference
+      attr_reader :update_column_list
+      attr_reader :where_clause
+
+    end
     
     class Insert < Node
       
@@ -280,7 +294,7 @@ module SQLParser
       attr_reader :values
       
     end
-    
+
     class InColumnList < Node
       
       def initialize(columns)
@@ -418,6 +432,18 @@ module SQLParser
     end
 
     class Column < Identifier
+    end
+
+    class UpdateColumn < Node
+
+      def initialize(column, value)
+        @column = column
+        @value = value
+      end
+
+      attr_reader :column
+      attr_reader :value
+
     end
 
     class As < Node

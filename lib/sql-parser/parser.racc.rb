@@ -367,7 +367,7 @@ racc_reduce_table = [
   5, 67, :_reduce_20,
   5, 68, :_reduce_21,
   3, 84, :_reduce_22,
-  3, 82, :_reduce_none,
+  3, 82, :_reduce_23,
   1, 82, :_reduce_none,
   3, 69, :_reduce_25,
   3, 81, :_reduce_26,
@@ -678,9 +678,9 @@ Racc_token_to_s_table = [
   "table_reference",
   "value_list",
   "column_list",
-  "update_field_list",
+  "update_column_list",
   "where_clause",
-  "update_field",
+  "update_column",
   "value_expression",
   "from_clause",
   "in_column_list",
@@ -845,19 +845,24 @@ module_eval(<<'.,.,', 'parser.racc', 48)
 
 module_eval(<<'.,.,', 'parser.racc', 51)
   def _reduce_21(val, _values, result)
-     result = nil 
+     result = SQLParser::Statement::Update.new(val[1], val[3], val[4]) 
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parser.racc', 54)
   def _reduce_22(val, _values, result)
-     result = nil 
+     result = SQLParser::Statement::UpdateColumn.new(val[0], val[2]) 
     result
   end
 .,.,
 
-# reduce 23 omitted
+module_eval(<<'.,.,', 'parser.racc', 57)
+  def _reduce_23(val, _values, result)
+     result = Array(val[0]) + Array(val[2]) 
+    result
+  end
+.,.,
 
 # reduce 24 omitted
 
