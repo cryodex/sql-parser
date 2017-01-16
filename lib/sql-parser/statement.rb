@@ -27,6 +27,42 @@ module SQLParser
       end
       
     end
+
+    class Delete < Node
+
+      def initialize(from_clause, where_clause = nil)
+        @from_clause = from_clause
+        @where_clause = where_clause
+      end
+
+      attr_reader :from_clause
+      attr_reader :where_clause
+
+    end
+
+    class Update < Node
+
+      def initialize(table_reference, update_column_list, where_clause = nil)
+        @table_reference = table_reference
+        @update_column_list = update_column_list
+        @where_clause = where_clause
+      end
+
+      attr_reader :table_reference
+      attr_reader :update_column_list
+      attr_reader :where_clause
+
+    end
+
+    class UpdateColumnList < Node
+
+      def initialize(update_columns)
+        @update_columns = Array(update_columns)
+      end
+
+      attr_reader :update_columns
+
+    end
     
     class Insert < Node
       
@@ -262,17 +298,17 @@ module SQLParser
     class InValueList < Node
       
       def initialize(values)
-        @values = values
+        @values = Array(values)
       end
 
       attr_reader :values
       
     end
-    
+
     class InColumnList < Node
       
       def initialize(columns)
-        @columns = columns
+        @columns = Array(columns)
       end
 
       attr_reader :columns
@@ -406,6 +442,18 @@ module SQLParser
     end
 
     class Column < Identifier
+    end
+
+    class UpdateColumn < Node
+
+      def initialize(column, value)
+        @column = column
+        @value = value
+      end
+
+      attr_reader :column
+      attr_reader :value
+
     end
 
     class As < Node

@@ -37,6 +37,8 @@ rule
 
 # keywords
             SELECT        { [:SELECT, text] }
+            UPDATE        { [:UPDATE, text] }
+            DELETE        { [:DELETE, text] }
             DATE          { [:DATE, text] }
             ASC           { [:ASC, text] }
             AS            { [:AS, text] }
@@ -74,6 +76,7 @@ rule
             DESC          { [:DESC, text] }
             CURRENT_USER  { [:CURRENT_USER, text] }
             VALUES        { [:VALUES, text] }
+            SET           { [:SET, text] }
 
 # tokens
             E             { [:E, text] }

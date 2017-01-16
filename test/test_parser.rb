@@ -10,12 +10,28 @@ class TestParser < Test::Unit::TestCase
     assert_understands 'SELECT `CURRENT_USER`'
     assert_understands 'SELECT `current_user`'
   end
+
+  def test_delete_from
+    assert_understands 'DELETE FROM `users`'
+  end
+
+  def test_delete_from_with_where
+    assert_understands 'DELETE FROM `users` WHERE `id` = 1'
+  end
+
+  def test_update
+    assert_understands 'UPDATE `users` SET `active` = 0'
+  end
+
+  def test_update_multiple
+    assert_understands 'UPDATE `users` SET `active` = 0, `email` = \'\''
+  end
   
   def test_insert_into_clause
     assert_understands 'INSERT INTO `users` VALUES (1, 2)'
   end
   
-  def test_insert_into_clause
+  def test_insert_into_clause_quoted
     assert_understands 'INSERT INTO `users` VALUES (`a`, `b`)'
   end
   
