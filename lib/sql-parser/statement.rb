@@ -27,6 +27,18 @@ module SQLParser
       end
       
     end
+
+    class Delete < Node
+
+      def initialize(from_clause, where_clause = nil)
+        @from_clause = from_clause
+        @where_clause = where_clause
+      end
+
+      attr_reader :from_clause
+      attr_reader :where_clause
+
+    end
     
     class Insert < Node
       

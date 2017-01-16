@@ -9,6 +9,12 @@ module SQLParser
     def visit(node)
       node.accept(self)
     end
+
+    def visit_Delete(o)
+      name = visit(o.from_clause)
+      where_clause = o.where_clause.nil? ? '' : ' ' + visit(o.where_clause)
+      "DELETE #{name}#{where_clause}"
+    end
     
     def visit_Insert(o)
       name = visit(o.table_reference)

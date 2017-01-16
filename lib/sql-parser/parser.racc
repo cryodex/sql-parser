@@ -9,6 +9,8 @@ rule
   direct_sql_data_statement
     : direct_select_statement_multiple_rows
     | insert_specification
+    | update_specification
+    | delete_specification
 
   direct_select_statement_multiple_rows
     : query_expression order_by_clause { result = SQLParser::Statement::DirectSelect.new(val[0], val[1]) }
@@ -57,7 +59,7 @@ rule
     | update_field
 
   delete_specification
-    : DELETE from_clause where_clause { result = nil }
+    : DELETE from_clause where_clause { result = SQLParser::Statement::Delete.new(val[1], val[2]) }
 
   column_list
     : left_paren in_column_list right_paren { result = SQLParser::Statement::InColumnList.new(val[1]) }
