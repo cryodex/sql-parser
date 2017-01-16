@@ -2,6 +2,22 @@ require File.dirname(__FILE__) + '/../lib/sql-parser'
 require 'test/unit'
 
 class TestStatement < Test::Unit::TestCase
+  def test_update_column
+    assert_sql '`active` = 1', update_col(col('active'), int(1))
+  end
+
+  def test_update
+    assert_sql 'UPDATE `users` SET `active` = 1', SQLParser::Statement::Update.new(tbl('users'), update_col(col('active'), int(1)))
+  end
+
+  def test_delete
+    assert_sql 'DELETE FROM `users`', SQLParser::Statement::Delete.new(from(tbl('users')))
+  end
+
+  def test_insert
+    assert_sql 'INSERT INTO `users` (`id`) VALUES (1)', SQLParser::Statement::Insert.new(tbl('users'), cols(col('id')), values(int(1)))
+  end
+
   def test_direct_select
     assert_sql 'SELECT * FROM `users` ORDER BY `name`', SQLParser::Statement::DirectSelect.new(select(all, tblx(from(tbl('users')))), SQLParser::Statement::OrderBy.new(col('name')))
   end
@@ -285,8 +301,16 @@ class TestStatement < Test::Unit::TestCase
     SQLParser::Statement::Integer.new(value)
   end
 
+  def values(ary)
+    SQLParser::Statement::InValueList.new(ary)
+  end
+
   def col(name)
     SQLParser::Statement::Column.new(name)
+  end
+
+  def cols(ary)
+    SQLParser::Statement::InColumnList.new(ary)
   end
 
   def tbl(name)
@@ -319,5 +343,9 @@ class TestStatement < Test::Unit::TestCase
 
   def group_by(columns)
     SQLParser::Statement::GroupByClause.new(columns)
+  end
+
+  def update_col(column, value)
+    SQLParser::Statement::UpdateColumn.new(column, value)
   end
 end

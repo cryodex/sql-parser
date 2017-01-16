@@ -42,7 +42,7 @@ module SQLParser
 
     class Update < Node
 
-      def initialize(table_reference, update_column_list, where_clause)
+      def initialize(table_reference, update_column_list, where_clause = nil)
         @table_reference = table_reference
         @update_column_list = update_column_list
         @where_clause = where_clause
@@ -298,7 +298,7 @@ module SQLParser
     class InValueList < Node
       
       def initialize(values)
-        @values = values
+        @values = Array(values)
       end
 
       attr_reader :values
@@ -308,7 +308,7 @@ module SQLParser
     class InColumnList < Node
       
       def initialize(columns)
-        @columns = columns
+        @columns = Array(columns)
       end
 
       attr_reader :columns
