@@ -53,6 +53,16 @@ module SQLParser
       attr_reader :where_clause
 
     end
+
+    class UpdateColumnList < Node
+
+      def initialize(update_columns)
+        @update_columns = Array(update_columns)
+      end
+
+      attr_reader :update_columns
+
+    end
     
     class Insert < Node
       

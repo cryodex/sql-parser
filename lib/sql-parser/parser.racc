@@ -54,9 +54,12 @@ rule
   update_column
     : column_name equals_operator value_expression { result = SQLParser::Statement::UpdateColumn.new(val[0], val[2]) }
 
-  update_column_list
-    : update_column comma update_column_list { result = Array(val[0]) + Array(val[2]) }
+  update_column_sublist
+    : update_column comma update_column_sublist { result = Array(val[0]) + Array(val[2]) }
     | update_column
+
+  update_column_list
+    : update_column_sublist { result = SQLParser::Statement::UpdateColumnList.new(val[0]) }
 
   delete_specification
     : DELETE from_clause where_clause { result = SQLParser::Statement::Delete.new(val[1], val[2]) }

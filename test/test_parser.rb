@@ -22,6 +22,10 @@ class TestParser < Test::Unit::TestCase
   def test_update
     assert_understands 'UPDATE `users` SET `active` = 0'
   end
+
+  def test_update_multiple
+    assert_understands 'UPDATE `users` SET `active` = 0, `email` = \'\''
+  end
   
   def test_insert_into_clause
     assert_understands 'INSERT INTO `users` VALUES (1, 2)'

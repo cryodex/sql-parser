@@ -28,6 +28,10 @@ module SQLParser
       value = visit(o.value)
       "#{column} = #{value}"
     end
+
+    def visit_UpdateColumnList(o)
+      arrayize(o.update_columns)
+    end
     
     def visit_Insert(o)
       name = visit(o.table_reference)
